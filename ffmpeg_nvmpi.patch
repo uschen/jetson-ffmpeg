@@ -1,5 +1,5 @@
 diff --git a/configure b/configure
-index 34c2adb..a861a73 100755
+index 6a7a85c..5810ab5 100755
 --- a/configure
 +++ b/configure
 @@ -340,6 +340,7 @@ External library support:
@@ -184,10 +184,10 @@ index d2f9a39..04dc62b 100644
  
 diff --git a/libavcodec/nvmpi_dec.c b/libavcodec/nvmpi_dec.c
 new file mode 100644
-index 0000000..694195c
+index 0000000..f82aa61
 --- /dev/null
 +++ b/libavcodec/nvmpi_dec.c
-@@ -0,0 +1,166 @@
+@@ -0,0 +1,171 @@
 +#include <stdio.h>
 +#include <stdlib.h>
 +#include <sys/time.h>
@@ -229,27 +229,32 @@ index 0000000..694195c
 +
 +static int nvmpi_init_decoder(AVCodecContext *avctx){
 +
-+	int ret=0;
-+
 +	nvmpiDecodeContext *nvmpi_context = avctx->priv_data;
 +	nvCodingType codectype=NV_VIDEO_CodingUnused;
 +
 +	codectype =nvmpi_get_codingtype(avctx);
 +	if (codectype == NV_VIDEO_CodingUnused) {
 +		av_log(avctx, AV_LOG_ERROR, "Unknown codec type (%d).\n", avctx->codec_id);
-+		ret = AVERROR_UNKNOWN;
-+		return ret;
++		return AVERROR_UNKNOWN;
++	}
++
++	//Workaround for default pix_fmt not being set, so check if it isnt set and set it,
++   //or if it is set, but isnt set to something we can work with.
++
++	if(avctx->pix_fmt ==AV_PIX_FMT_NONE){
++		 avctx->pix_fmt=AV_PIX_FMT_YUV420P;
++	}else if(avctx-> pix_fmt != AV_PIX_FMT_YUV420P){
++		av_log(avctx, AV_LOG_ERROR, "Invalid Pix_FMT for NVMPI Only yuv420p is supported\n");
++		return AVERROR_INVALIDDATA;
 +	}
 +
 +	nvmpi_context->ctx=nvmpi_create_decoder(codectype,NV_PIX_YUV420);
 +
 +	if(!nvmpi_context->ctx){
-+		av_log(avctx, AV_LOG_ERROR, "Failed to nvmpi_create_decoder (code = %d).\n", ret);
-+		ret = AVERROR_UNKNOWN;
-+		return ret;
++		av_log(avctx, AV_LOG_ERROR, "Failed to nvmpi_create_decoder (code = %d).\n", AVERROR_EXTERNAL);
++		return AVERROR_EXTERNAL;
 +	}
-+
-+	return ret;
++   return 0;
 +
 +}
 +
@@ -285,7 +290,6 @@ index 0000000..694195c
 +
 +	if(res<0)
 +		return avpkt->size;
-+
 +
 +	if (ff_get_buffer(avctx, frame, 0) < 0) {
 +		return AVERROR(ENOMEM);
@@ -353,7 +357,8 @@ index 0000000..694195c
 +NVMPI_DEC(mpeg2, AV_CODEC_ID_MPEG2VIDEO,NULL);
 +NVMPI_DEC(mpeg4, AV_CODEC_ID_MPEG4,NULL);
 +NVMPI_DEC(vp9,  AV_CODEC_ID_VP9,NULL);
-+NVMPI_DEC(vp8,  AV_CODEC_ID_VP8,NULL);
++NVMPI_DEC(vp8, AV_CODEC_ID_VP8,NULL);
++
 diff --git a/libavcodec/nvmpi_enc.c b/libavcodec/nvmpi_enc.c
 new file mode 100644
 index 0000000..0e1390e
