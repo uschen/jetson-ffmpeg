@@ -267,6 +267,11 @@ nvmpictx* nvmpi_create_encoder(nvCodingType codingType,nvEncParam * param){
 	}
 
 	TEST_ERROR(ret < 0, "Could not set output plane format", ret);
+	
+	ret = ctx->enc->setMaxPerfMode(1);
+
+	TEST_ERROR(ret < 0, "Could not set MaxPerfMode", ret);
+
 
 	ret = ctx->enc->setBitrate(ctx->bitrate);
 	TEST_ERROR(ret < 0, "Could not set encoder bitrate", ret);
